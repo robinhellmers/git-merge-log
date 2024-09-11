@@ -57,6 +57,12 @@ library_sourcing
 
 main()
 {
+    if (( $# == 0 ))
+    then
+        command git merge
+        exit 0
+    fi
+
     _handle_args_main "$@"
 
     current_branch="$(git rev-parse --abbrev-ref HEAD)"
