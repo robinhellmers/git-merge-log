@@ -70,7 +70,7 @@ main()
 	${commit_message}
 	END_OF_COMMIT_MESSAGE
 
-    git merge --no-ff -m "$commit_message" "${arguments[@]}"
+    command git merge --no-ff -m "$commit_message" "${arguments[@]}"
 }
 
 ###################
