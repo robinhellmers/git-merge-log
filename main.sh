@@ -29,7 +29,7 @@ library_sourcing()
 
     ### Source libraries ###
     source "$LIB_PATH/lib_core.bash" || exit 1
-    source_lib "$LIB_PATH/lib.bash"
+    # source_lib "$LIB_PATH/lib.bash"
 }
 
 # Minimal version of find_path(). Should only be used within this script to source library defining find_path().
@@ -59,69 +59,66 @@ main()
 {
     _handle_args_main "$@"
 
-    local this_file="$(find_path 'this_file' "${#BASH_SOURCE[@]}" "${BASH_SOURCE[@]}")"
+    current_branch="$(git rev-parse --abbrev-ref HEAD)"
 
-    [[ "$verbose" == 'true' ]] &&
-        echo -e "\nthis_file: $this_file"
+    commit_message=$(git log --pretty=format:'%h %s' "HEAD..$feature_branch")
 
-    func_lib 123
+    define commit_message <<-END_OF_COMMIT_MESSAGE
+	Merge '$feature_branch' into '$current_branch'
+	
+	Merge list:
+	${commit_message}
+	END_OF_COMMIT_MESSAGE
+
+    git merge --no-ff -m "$commit_message" "${arguments[@]}"
 }
 
 ###################
 ### END OF MAIN ###
 ###################
 
-register_function_flags 'script name'
+register_function_flags 'git-merge-log' \
+    '-m' '' 'true' 'Is ignored. Merge message overridden by git-merge-log.'
 
-register_help_text 'script name' <<-END_OF_HELP_TEXT
-<script name> [arg1]
+register_help_text 'git-merge-log' <<-END_OF_HELP_TEXT
+git merge-log
 
-<description>
+Creates a better log message for a 'git merge'. Also by default ensures
+that no fast-forward (--no-ff) is used.
 
-[arg1] (Optional): The content of arg1'
-
-register_function_flags 'script name' \
-                        '-v' '--verbose' 'false' \
-                        'Verbose output.' \
-                        '-e' '--echo' 'true' \
-                        'Echo string given after flag.'
+Arguments:
+    See 'git merge'. Will throw away potential '-m' flag.
 END_OF_HELP_TEXT
 
 _handle_args_main()
 {
-    _handle_args 'script name' "$@"
+    _handle_args 'git-merge-log' --allow-non-registered-flags "$@"
+
+    # Will not include the -m flag
+    arguments=("${non_flagged_args[@]}")
 
     ###
     # Non-flagged arguments
-    if (( ${#non_flagged_args[@]} != 0 ))
-    then
-        # Optional argument 1
-        main_input_dir=${non_flagged_args[0]}
-        if ! [[ -d "$main_input_dir" ]]
-        then
-            define error_info << END_OF_ERROR_INFO
-Given [ DIR ] is not a directory: '$main_input_dir'
-END_OF_ERROR_INFO
-            invalid_function_usage 2 'script name' "$error_info"
-            exit 1
-        fi
-    fi
+#     if (( ${#non_flagged_args[@]} != 0 ))
+#     then
+#         # Optional argument 1
+#         main_input_dir=${non_flagged_args[0]}
+#         if ! [[ -d "$main_input_dir" ]]
+#         then
+#             define error_info << END_OF_ERROR_INFO
+# Given [ DIR ] is not a directory: '$main_input_dir'
+# END_OF_ERROR_INFO
+#             invalid_function_usage 2 'script name' "$error_info"
+#             exit 1
+#         fi
+#     fi
     ###
 
     ###
-    # -e, --echo
-    if [[ "$echo_flag" == 'true' ]]
+    # -m
+    if [[ "$m_flag" == 'true' ]]
     then
-        echo
-        echo "$echo_flag_value"
-    fi
-    ###
-
-    ###
-    # -v --verbose
-    if [[ "$verbose_flag" == 'true' ]]
-    then
-        verbose='true'
+        echo "-m option is ignored as git merge-log overrides the message"
     fi
     ###
 
