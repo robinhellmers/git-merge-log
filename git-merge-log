@@ -67,16 +67,19 @@ main()
 
     current_branch="$(git rev-parse --abbrev-ref HEAD)"
 
-    commit_message=$(git log --pretty=format:'%h %s' "HEAD..$feature_branch")
+    commit_message=$(git log --pretty=format:'%h %s' "HEAD..$branch")
 
     define commit_message <<-END_OF_COMMIT_MESSAGE
-	Merge '$feature_branch' into '$current_branch'
+	Merge '$branch' into '$current_branch'
 	
 	Merge list:
 	${commit_message}
 	END_OF_COMMIT_MESSAGE
 
-    command git merge --no-ff -m "$commit_message" "${arguments[@]}"
+    command git merge "$branch" \
+        --no-ff \
+        -m "$commit_message" \
+        "${other_arguments[@]}"
 }
 
 ###################
@@ -87,38 +90,39 @@ register_function_flags 'git-merge-log' \
     '-m' '' 'true' 'Is ignored. Merge message overridden by git-merge-log.'
 
 register_help_text 'git-merge-log' <<-END_OF_HELP_TEXT
-git merge-log
+git merge-log <branch>
 
 Creates a better log message for a 'git merge'. Also by default ensures
 that no fast-forward (--no-ff) is used.
 
 Arguments:
-    See 'git merge'. Will throw away potential '-m' flag.
+    <branch>:
+        Branch to merge into current branch. If none is given, default
+        'git merge' command will be used.
+    [Extra]:
+        See 'git merge'. Will throw away potential '-m' flag.
 END_OF_HELP_TEXT
 
 _handle_args_main()
 {
     _handle_args 'git-merge-log' --allow-non-registered-flags "$@"
 
-    # Will not include the -m flag
-    arguments=("${non_flagged_args[@]}")
+    branch="${non_flagged_args[0]}"
 
-    ###
-    # Non-flagged arguments
-#     if (( ${#non_flagged_args[@]} != 0 ))
-#     then
-#         # Optional argument 1
-#         main_input_dir=${non_flagged_args[0]}
-#         if ! [[ -d "$main_input_dir" ]]
-#         then
-#             define error_info << END_OF_ERROR_INFO
-# Given [ DIR ] is not a directory: '$main_input_dir'
-# END_OF_ERROR_INFO
-#             invalid_function_usage 2 'script name' "$error_info"
-#             exit 1
-#         fi
-#     fi
-    ###
+    # Will not include the -m flag
+    other_arguments=("${non_flagged_args[@]:1}")
+
+    if ! git show-ref --quiet "refs/heads/$branch"
+    then
+        local error_info
+        define error_info <<-END_OF_ERROR_INFO
+		You must input a branch to merge into current branch. Given branch '$branch'
+		does not exist.
+		END_OF_ERROR_INFO
+
+        invalid_function_usage 1 'git-merge-log' "$error_info"
+        exit 1
+    fi
 
     ###
     # -m
